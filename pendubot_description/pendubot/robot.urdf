@@ -1,0 +1,186 @@
+<robot name="pendubot">
+<link name="support_plaform_1">
+<visual>
+<origin xyz="-0.085000000000000019984 0.024999999999999997918 -0.020000000000000003886" rpy="-1.3877787807814456755e-16 1.9047944049941415051e-16 0" />
+<geometry>
+<mesh filename="package://pendubot_description/pendubot/support_plaform_1.stl"/>
+</geometry>
+<material name="support_plaform_1_material">
+<color rgba="0.61568627450980395466 0.81176470588235294379 0.92941176470588238168 1.0"/>
+</material>
+</visual>
+<collision>
+<origin xyz="-0.085000000000000019984 0.024999999999999997918 -0.020000000000000003886" rpy="-1.3877787807814456755e-16 1.9047944049941415051e-16 0" />
+<geometry>
+<mesh filename="package://pendubot_description/pendubot/support_plaform_1.stl"/>
+</geometry>
+</collision>
+<inertial>
+<origin xyz="-0.084999999999999978351 0.0019366224157372038169 0.20527754982977566844" rpy="0 0 0"/>
+<mass value="8.3650792577619803581" />
+<inertia ixx="0.18809404056513884251" ixy="6.6429634534729561893e-19"  ixz="-3.3040840509945104842e-17" iyy="0.19768960892502629445" iyz="0.0034874963072423492694" izz="0.014632587595117504606" />
+</inertial>
+</link>
+
+<link name="cart_pole_line">
+<visual>
+<origin xyz="0.0050000000000000009714 -0.049999999999999988898 -1.3877787807814456755e-17" rpy="-1.570796326794896558 -1.570796326794896558 0" />
+<geometry>
+<mesh filename="package://pendubot_description/pendubot/cart_pole_line.stl"/>
+</geometry>
+<material name="cart_pole_line_material">
+<color rgba="0.61568627450980395466 0.81176470588235294379 0.92941176470588238168 1.0"/>
+</material>
+</visual>
+<collision>
+<origin xyz="0.0050000000000000009714 -0.049999999999999988898 -1.3877787807814456755e-17" rpy="-1.570796326794896558 -1.570796326794896558 0" />
+<geometry>
+<mesh filename="package://pendubot_description/pendubot/cart_pole_line.stl"/>
+</geometry>
+</collision>
+<inertial>
+<origin xyz="-0.99507213325206489429 -0.021216690244781032104 -3.5306212902944823361e-05" rpy="0 0 0"/>
+<mass value="17.129471613392958318" />
+<inertia ixx="0.010371517126750266768" ixy="-2.2571194222369972551e-05"  ixz="8.5176426230256071983e-06" iyy="5.7133527876254550648" iyz="-5.938288855520099704e-06" izz="5.7091229148612372413" />
+</inertial>
+</link>
+
+<link name="support_plaform_1_2">
+<visual>
+<origin xyz="0.0050000000000001154632 -0.48999999999999999112 8.3266726846886740532e-17" rpy="-1.570796326794896558 -1.570796326794896558 0" />
+<geometry>
+<mesh filename="package://pendubot_description/pendubot/support_plaform_1.stl"/>
+</geometry>
+<material name="support_plaform_1_material">
+<color rgba="0.61568627450980395466 0.81176470588235294379 0.92941176470588238168 1.0"/>
+</material>
+</visual>
+<collision>
+<origin xyz="0.0050000000000001154632 -0.48999999999999999112 8.3266726846886740532e-17" rpy="-1.570796326794896558 -1.570796326794896558 0" />
+<geometry>
+<mesh filename="package://pendubot_description/pendubot/support_plaform_1.stl"/>
+</geometry>
+</collision>
+<inertial>
+<origin xyz="-0.018063377584262709646 -0.26472245017022433267 7.9318860187151341436e-17" rpy="0 0 0"/>
+<mass value="8.3650792577619803581" />
+<inertia ixx="0.19768960892502629445" ixy="0.0034874963072423744229"  ixz="2.639638845664999534e-49" iyy="0.014632587595117504606" iyz="2.3862418064830125439e-51" izz="0.18809404056513884251" />
+</inertial>
+</link>
+
+<joint name="fastened 3" type="fixed">
+<origin xyz="-1.9899999999999999911 0 -1.3877787807814456755e-17" rpy="3.141592653589793116 6.8422776578360208541e-49 3.141592653589793116" />
+<parent link="cart_pole_line" />
+<child link="support_plaform_1_2" />
+<axis xyz="0 0 1"/>
+<limit effort="1" velocity="20" />
+<joint_properties friction="0.0"/>
+</joint>
+
+<link name="cart_move">
+<visual>
+<origin xyz="0.090000000000000024425 -0.025000000000000022204 -0.074999999999999955591" rpy="-1.570796326794896558 -1.570796326794896336 0" />
+<geometry>
+<mesh filename="package://pendubot_description/pendubot/cart_move.stl"/>
+</geometry>
+<material name="cart_move_material">
+<color rgba="0.61568627450980395466 0.81176470588235294379 0.92941176470588238168 1.0"/>
+</material>
+</visual>
+<collision>
+<origin xyz="0.090000000000000024425 -0.025000000000000022204 -0.074999999999999955591" rpy="-1.570796326794896558 -1.570796326794896336 0" />
+<geometry>
+<mesh filename="package://pendubot_description/pendubot/cart_move.stl"/>
+</geometry>
+</collision>
+<inertial>
+<origin xyz="0.040619485761392813694 0.03507424335133896981 5.5511151231257827021e-17" rpy="0 0 0"/>
+<mass value="2.7582989593438584919" />
+<inertia ixx="0.0072884337806232426735" ixy="1.7214130923659983201e-05"  ixz="5.5457548773363819873e-21" iyy="0.007943139603199119228" iyz="9.1364122808394913014e-19" izz="0.0051071794741707502926" />
+</inertial>
+</link>
+
+<link name="cart_swinger">
+<visual>
+<origin xyz="1.1102230246251565404e-16 -0.23000000000000000999 -0.020000000000000000416" rpy="-1.570796326794896558 -3.8811238815456647556e-49 0" />
+<geometry>
+<mesh filename="package://pendubot_description/pendubot/cart_swinger.stl"/>
+</geometry>
+<material name="cart_swinger_material">
+<color rgba="0.61568627450980395466 0.81176470588235294379 0.92941176470588238168 1.0"/>
+</material>
+</visual>
+<collision>
+<origin xyz="1.1102230246251565404e-16 -0.23000000000000000999 -0.020000000000000000416" rpy="-1.570796326794896558 -3.8811238815456647556e-49 0" />
+<geometry>
+<mesh filename="package://pendubot_description/pendubot/cart_swinger.stl"/>
+</geometry>
+</collision>
+<inertial>
+<origin xyz="-2.2983265886371830608e-08 -0.11025900292345226783 -0.0080888724187521965359" rpy="0 0 0"/>
+<mass value="0.48763073080899393963" />
+<inertia ixx="0.0024968640996937086982" ixy="3.8883696011364461363e-10"  ixz="-1.4181265057008209006e-10" iyy="6.5485683220027306856e-05" iyz="-2.5769181796588400059e-05" izz="0.0025009745471827196997" />
+</inertial>
+</link>
+
+<link name="cart_swinger_2">
+<visual>
+<origin xyz="1.1102230246251565404e-16 -0.22999999999999998224 -0.0050000000000000027062" rpy="-1.570796326794896558 -3.8811238815456647556e-49 0" />
+<geometry>
+<mesh filename="package://pendubot_description/pendubot/cart_swinger.stl"/>
+</geometry>
+<material name="cart_swinger_material">
+<color rgba="0.61568627450980395466 0.81176470588235294379 0.92941176470588238168 1.0"/>
+</material>
+</visual>
+<collision>
+<origin xyz="1.1102230246251565404e-16 -0.22999999999999998224 -0.0050000000000000027062" rpy="-1.570796326794896558 -3.8811238815456647556e-49 0" />
+<geometry>
+<mesh filename="package://pendubot_description/pendubot/cart_swinger.stl"/>
+</geometry>
+</collision>
+<inertial>
+<origin xyz="-2.2983265886371830608e-08 -0.11025900292345224007 0.0069111275812478011743" rpy="0 0 0"/>
+<mass value="0.48763073080899393963" />
+<inertia ixx="0.0024968640996937086982" ixy="3.8883696011364461363e-10"  ixz="-1.4181265057008209006e-10" iyy="6.5485683220027306856e-05" iyz="-2.5769181796588400059e-05" izz="0.0025009745471827196997" />
+</inertial>
+</link>
+
+<joint name="continuous_revolute 2" type="continuous">
+<origin xyz="1.1102230246251565404e-16 -0.20000000000000006661 -0.025000000000000011796" rpy="3.141592653589793116 1.232595164407828209e-32 3.141592653589793116" />
+<parent link="cart_swinger" />
+<child link="cart_swinger_2" />
+<axis xyz="0 0 1"/>
+<limit effort="1" velocity="20" />
+<joint_properties friction="0.0"/>
+</joint>
+
+<joint name="continuous_revolute 1" type="continuous">
+<origin xyz="0.10468245836551855199 0.024999999999999911182 0" rpy="-2.4651903288156618919e-32 -1.570796326794896336 0" />
+<parent link="cart_move" />
+<child link="cart_swinger" />
+<axis xyz="0 0 1"/>
+<limit effort="1" velocity="20" />
+<joint_properties friction="0.0"/>
+</joint>
+
+<joint name="slider 1" type="prismatic">
+<origin xyz="-0.99499999999999999556 -0.025000000000000022204 -0.040000000000000021649" rpy="-0 -1.570796326794896558 0" />
+<parent link="cart_pole_line" />
+<child link="cart_move" />
+<axis xyz="0 0 1"/>
+<limit effort="1" velocity="20" lower="-0.80000000000000004441" upper="0.80000000000000004441"/>
+<joint_properties friction="0.0"/>
+</joint>
+
+<joint name="fastened 2" type="fixed">
+<origin xyz="-0.085000000000000006106 0.020000000000000055927 0.46999999999999997335" rpy="1.57079632679489678 1.3877787807814456755e-16 1.570796326794896558" />
+<parent link="support_plaform_1" />
+<child link="cart_pole_line" />
+<axis xyz="0 0 1"/>
+<limit effort="1" velocity="20" />
+<joint_properties friction="0.0"/>
+</joint>
+
+
+</robot>

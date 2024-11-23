@@ -1,0 +1,7 @@
+{
+    "documentId": "30adf08b936b40b5a3bca919",
+    "outputFormat": "urdf",
+    "packageName": "pendubot_description/pendubot",
+    "robotName": "pendubot",
+    "assemblyName": "pendubot_system"
+  }
