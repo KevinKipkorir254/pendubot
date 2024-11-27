@@ -1,4 +1,7 @@
-<robot name="pendubot">
+<?xml version="1.0"?>
+<robot name="pendubot"  xmlns:xacro="http://wiki.ros.org/xacro">
+
+<xacro:include filename="$(find pendubot_description)/pendubot/ros2_control.urdf.xacro"/> 
 <link name="support_plaform_1">
 <visual>
 <origin xyz="-0.085000000000000019984 0.024999999999999997918 -0.020000000000000003886" rpy="-1.3877787807814456755e-16 1.9047944049941415051e-16 0" />
@@ -146,7 +149,7 @@
 </inertial>
 </link>
 
-<joint name="continuous_revolute 2" type="continuous">
+<joint name="continuous_revolute_2" type="continuous">
 <origin xyz="1.1102230246251565404e-16 -0.20000000000000006661 -0.025000000000000011796" rpy="3.141592653589793116 1.232595164407828209e-32 3.141592653589793116" />
 <parent link="cart_swinger" />
 <child link="cart_swinger_2" />
@@ -155,7 +158,7 @@
 <joint_properties friction="0.0"/>
 </joint>
 
-<joint name="continuous_revolute 1" type="continuous">
+<joint name="continuous_revolute_1" type="continuous">
 <origin xyz="0.10468245836551855199 0.024999999999999911182 0" rpy="-2.4651903288156618919e-32 -1.570796326794896336 0" />
 <parent link="cart_move" />
 <child link="cart_swinger" />
@@ -164,7 +167,7 @@
 <joint_properties friction="0.0"/>
 </joint>
 
-<joint name="slider 1" type="prismatic">
+<joint name="slider_1" type="prismatic">
 <origin xyz="-0.99499999999999999556 -0.025000000000000022204 -0.040000000000000021649" rpy="-0 -1.570796326794896558 0" />
 <parent link="cart_pole_line" />
 <child link="cart_move" />

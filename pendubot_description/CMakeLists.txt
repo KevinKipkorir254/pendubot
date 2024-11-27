@@ -28,6 +28,7 @@ install(
     rviz
     launch
     pendubot
+    config
   DESTINATION
     share/${PROJECT_NAME}/
 )
