@@ -161,11 +161,11 @@ class JointStateSubscriber : public rclcpp::Node
             {
                 double gains_[4] = { -141.4214, -77.6558, -238.7684, -36.5906};
 
-                double from_output = (gains_[0]*swinger2_position);
-                double first = (gains_[1]*swinger1_velocity) + (gains_[2]*swinger2_position) +(gains_[3]*swinger2_velocity);
+                double from_output = (gains_[2]*swinger2_position);
+                double first = (gains_[0]*swinger1_position) + (gains_[1]*swinger1_velocity) + (gains_[3]*swinger2_velocity);
 
                 double final_gain = (from_output - first);
-                f = 100*final_gain;
+                f = final_gain;
                 RCLCPP_INFO(this->get_logger(), GREEN_TEXT"F: %.4f", f);
 
             }
