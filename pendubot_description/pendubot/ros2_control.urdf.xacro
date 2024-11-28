@@ -7,9 +7,9 @@
   </hardware>
 
   <joint name="slider_1">
-    <command_interface name="effort">
-      <param name="min">-1000</param>
-      <param name="max">1000</param>
+    <command_interface name="position">
+      <param name="min">-0.85</param>
+      <param name="max">0.85</param>
     </command_interface>
     <state_interface name="position">
       <param name="initial_value">0.0</param>
