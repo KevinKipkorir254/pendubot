@@ -131,11 +131,14 @@ class JointStateSubscriber : public rclcpp::Node
                 double inertia1 = 150.0;
                 double inertia2 = 150.0;
 
-                double q1 = M_PI_2 + swinger1_position; //Angle that link 1 makes with the horizontal
+                //TODO check it ths q1 is correct
+                double q1 = M_PI_2 + swinger1_position; //Angle that link 1 makes with the horizontal  
                 double q2 = M_PI_2 + swinger1_position + swinger2_position; //Angle that link 2 makes with link 1
 
                 double q_dash = (q1 - M_PI_2);
-                double E_dash = 0.0;
+
+                //TODO solve this so we can get the E_ash from the book, I need to move on to the next
+                double E_dash = 0.0;   //Remember to update this thing we need to solve it
 
                 double dq1 = swinger1_velocity; //
                 double dq2 = swinger2_velocity; //Angle that link
