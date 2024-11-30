@@ -29,6 +29,32 @@ class JointStateSubscriber : public rclcpp::Node
       publisher_ = this->create_publisher<std_msgs::msg::Float64MultiArray>("effort_controller/commands", 10);
       publisher_position_ = this->create_publisher<std_msgs::msg::Float64MultiArray>( "position_controller/commands", 10);
 
+            this->declare_parameter("K", rclcpp::PARAMETER_DOUBLE_ARRAY);
+            this->declare_parameter("kd", rclcpp::PARAMETER_DOUBLE);
+            this->declare_parameter("ke", rclcpp::PARAMETER_DOUBLE);
+            this->declare_parameter("kp", rclcpp::PARAMETER_DOUBLE);
+            this->declare_parameter("lqr_transition_angle", rclcpp::PARAMETER_DOUBLE);
+
+                        
+            try {
+                K_ = Eigen::Vector4d(this->get_parameter("K").as_double_array().data());
+                kd_ = this->get_parameter("kd").as_double();
+                ke_ = this->get_parameter("ke").as_double();
+                kp_ = this->get_parameter("kp").as_double();
+                lqr_transition_angle_ = this->get_parameter("lqr_transition_angle").as_double();
+
+                
+            RCLCPP_WARN(this->get_logger(), "K: %.4f, %.4f, %.4f, %.4f", K_(0), K_(1), K_(2), K_(3));
+            RCLCPP_WARN(this->get_logger(), "kd: %.4f", kd_);
+            RCLCPP_WARN(this->get_logger(), "ke: %.4f", ke_);
+            RCLCPP_WARN(this->get_logger(), "kp: %.4f", kp_);
+            RCLCPP_WARN(this->get_logger(), "lqr_transition_angle_: %.4f", lqr_transition_angle_);
+
+            } catch (const rclcpp::exceptions::ParameterUninitializedException & e) {
+                RCLCPP_ERROR_STREAM(this->get_logger(), "Required parameter not defined: " << e.what());
+                throw e;
+            }
+
     }
 
   private:
@@ -50,6 +76,8 @@ class JointStateSubscriber : public rclcpp::Node
             
             double swinger2_position;
             double swinger2_velocity;
+            
+            double switching_range = lqr_transition_angle_;
 
 
         if (slider_it != msg.name.end())
@@ -97,8 +125,8 @@ class JointStateSubscriber : public rclcpp::Node
         if((slider_it != msg.name.end()) || (swinger1_it != msg.name.end()) || (swinger2_it != msg.name.end()))
         {
               // Define the range boundaries
-              double lower_limit = PI - 0.523599;
-              double upper_limit = PI + 0.523599;
+              double lower_limit = PI - switching_range;
+              double upper_limit = PI + switching_range;
 
                   // Normalize swinger_position to [0, 2*PI]
               double normalized_position = fmod(swinger2_position, 2 * PI);
@@ -115,9 +143,9 @@ class JointStateSubscriber : public rclcpp::Node
                 // Control parameters
                 /*--------------------------------------------------------------------------------*/
                 //THIS SHOULD BE ADDED TO A YAML FILE
-                double kd = 1.0;
-                double ke = 0.001;
-                double kp = 100.0;
+                double kd = kd_;
+                double ke = ke_;
+                double kp = kp_;
                 /*-------------------------------------------------------------------------------*/
 
                 double mass_1 = 0.48763073080899393963;
@@ -185,6 +213,11 @@ class JointStateSubscriber : public rclcpp::Node
     rclcpp::Subscription<sensor_msgs::msg::JointState>::SharedPtr subscription_;
     rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr publisher_; // effort controller publisher
     rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr publisher_position_; // effort controller publisher
+    Eigen::Vector4d K_;
+    double kd_;
+    double ke_;
+    double kp_;
+    double lqr_transition_angle_;
 };
 
 int main(int argc, char * argv[])
