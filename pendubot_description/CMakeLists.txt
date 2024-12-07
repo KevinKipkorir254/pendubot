@@ -29,6 +29,7 @@ install(
     launch
     pendubot
     config
+    worlds
   DESTINATION
     share/${PROJECT_NAME}/
 )

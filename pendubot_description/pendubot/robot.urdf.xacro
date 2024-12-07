@@ -167,12 +167,12 @@
 <joint_properties friction="0.0"/>
 </joint>
 
-<joint name="slider_1" type="prismatic">
+<joint name="slider_1" type="fixed">
 <origin xyz="-0.99499999999999999556 -0.025000000000000022204 -0.040000000000000021649" rpy="-0 -1.570796326794896558 0" />
 <parent link="cart_pole_line" />
 <child link="cart_move" />
 <axis xyz="0 0 1"/>
-<limit effort="1" velocity="20" lower="-0.80000000000000004441" upper="0.80000000000000004441"/>
+<limit effort="1" velocity="20"/>
 <joint_properties friction="0.0"/>
 </joint>
 
