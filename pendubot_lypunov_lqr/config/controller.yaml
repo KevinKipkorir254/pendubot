@@ -2,14 +2,20 @@
   ros__parameters:
     K: [ -141.4214, -77.6558, -238.7684, -36.5906]
 
-    kd: 1.0
-    ke: 5.0
-    kp: 1.0
+    kd: 0.1
+    ke: 0.1
+    kp: 0.020
 
     # 0.0 angle - upward position. When absolute angle is less than this threshold
     # transition from swing up to LQR
     lqr_transition_angle: 0.523599
     rviz_test: false
+
+    PID_KP: 2.0
+    PID_KD: 2.0
+
+    negative_clamp_limit: -100.0
+    positive_clamp_limit: 100.0
    
 # K_ = Eigen::Vector4d(this->get_parameter("K").as_double_array().data());
 # ke_ = this->get_parameter("ke").as_double();
@@ -17,3 +23,6 @@
 # kx_ = this->get_parameter("kx").as_double();
 # kdelta_ = this->get_parameter("kdelta").as_double();
 # lqr_transition_angle_ = this->get_parameter("lqr_transition_angle").as_double();
+#
+#    double PID_k_;
+#   double PID_d_;

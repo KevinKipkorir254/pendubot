@@ -20,7 +20,7 @@
 </collision>
 <inertial>
 <origin xyz="-0.084999999999999978351 0.0019366224157372038169 0.20527754982977566844" rpy="0 0 0"/>
-<mass value="8.3650792577619803581" />
+<mass value="800.3650792577619803581" />
 <inertia ixx="0.18809404056513884251" ixy="6.6429634534729561893e-19"  ixz="-3.3040840509945104842e-17" iyy="0.19768960892502629445" iyz="0.0034874963072423492694" izz="0.014632587595117504606" />
 </inertial>
 </link>
@@ -66,7 +66,7 @@
 </collision>
 <inertial>
 <origin xyz="-0.018063377584262709646 -0.26472245017022433267 7.9318860187151341436e-17" rpy="0 0 0"/>
-<mass value="8.3650792577619803581" />
+<mass value="800.3650792577619803581" />
 <inertia ixx="0.19768960892502629445" ixy="0.0034874963072423744229"  ixz="2.639638845664999534e-49" iyy="0.014632587595117504606" iyz="2.3862418064830125439e-51" izz="0.18809404056513884251" />
 </inertial>
 </link>
@@ -150,11 +150,12 @@
 </link>
 
 <joint name="continuous_revolute_2" type="continuous">
+<!-- <joint name="continuous_revolute_2" type="fixed"> -->
 <origin xyz="1.1102230246251565404e-16 -0.20000000000000006661 -0.025000000000000011796" rpy="3.141592653589793116 1.232595164407828209e-32 3.141592653589793116" />
 <parent link="cart_swinger" />
 <child link="cart_swinger_2" />
 <axis xyz="0 0 1"/>
-<limit effort="1" velocity="20" />
+<limit effort="10000" velocity="20" />
 <joint_properties friction="0.0"/>
 </joint>
 
@@ -163,7 +164,7 @@
 <parent link="cart_move" />
 <child link="cart_swinger" />
 <axis xyz="0 0 1"/>
-<limit effort="1" velocity="20" />
+<limit effort="10000" velocity="20" />
 <joint_properties friction="0.0"/>
 </joint>
 

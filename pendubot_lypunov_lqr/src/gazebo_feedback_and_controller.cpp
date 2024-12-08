@@ -35,6 +35,10 @@ public:
         this->declare_parameter("kp", rclcpp::PARAMETER_DOUBLE);
         this->declare_parameter("lqr_transition_angle", rclcpp::PARAMETER_DOUBLE);
         this->declare_parameter("rviz_test", rclcpp::PARAMETER_BOOL);
+        this->declare_parameter("PID_KP", rclcpp::PARAMETER_DOUBLE);
+        this->declare_parameter("PID_KD", rclcpp::PARAMETER_DOUBLE);
+        this->declare_parameter("negative_clamp_limit", rclcpp::PARAMETER_DOUBLE);
+        this->declare_parameter("positive_clamp_limit", rclcpp::PARAMETER_DOUBLE);
 
         try
         {
@@ -44,12 +48,20 @@ public:
             kp_ = this->get_parameter("kp").as_double();
             lqr_transition_angle_ = this->get_parameter("lqr_transition_angle").as_double();
             rviz_test = this->get_parameter("rviz_test").as_bool();
+            PID_k_ = this->get_parameter("PID_KP").as_double();
+            PID_d_ = this->get_parameter("PID_KD").as_double();
+            negative_clamp_limit_ = this->get_parameter("negative_clamp_limit").as_double();
+            positive_clamp_limit_ = this->get_parameter("positive_clamp_limit").as_double();
 
             RCLCPP_WARN(this->get_logger(), "K: %.4f, %.4f, %.4f, %.4f", K_(0), K_(1), K_(2), K_(3));
             RCLCPP_WARN(this->get_logger(), "kd: %.4f", kd_);
             RCLCPP_WARN(this->get_logger(), "ke: %.4f", ke_);
             RCLCPP_WARN(this->get_logger(), "kp: %.4f", kp_);
+            RCLCPP_WARN(this->get_logger(), "PID_KP: %.4f", PID_k_);
+            RCLCPP_WARN(this->get_logger(), "PID_KD: %.4f", PID_d_);
             RCLCPP_WARN(this->get_logger(), "lqr_transition_angle_: %.4f", lqr_transition_angle_);
+            RCLCPP_WARN(this->get_logger(), "lower clamp: %.4f", negative_clamp_limit_);
+            RCLCPP_WARN(this->get_logger(), "higher clamp: %.4f", positive_clamp_limit_);
             if (rviz_test)
             {
                 RCLCPP_WARN(this->get_logger(), "RVIZ_TEST: TRUE");
@@ -183,9 +195,9 @@ private:
                 0.0;
 
             double E = 0.5 * Pq.transpose() * Dq * Pq + theta_design_4 * g * sin(converted_position_1) + theta_design_5 * g * sin(converted_position_1 + converted_position_2);
-            double E_top = theta_design_4 * g + theta_design_5 * g; // TOP POSITION q_1 = PI/2 q_2 = 0.0
+            double E_top = (theta_design_4 + theta_design_5) * g; // TOP POSITION q_1 = PI/2 q_2 = 0.0
             double E_dash = E - E_top;
-            double q_dash = converted_position_1 - ((PI) / 2);
+            double q_dash = converted_position_1 - (PI / 2);
 
             double force = theta_design_2 * theta_design_3 * sin(converted_position_2) * (converted_velocity_1 + converted_velocity_2) * (converted_velocity_1 + converted_velocity_2) + theta_design_3 * theta_design_3 * cos(converted_position_2) * sin(converted_position_2) * (converted_velocity_1 * converted_velocity_1) - theta_design_2 * theta_design_4 * g * cos(converted_position_1) + theta_design_3 * theta_design_5 * g * cos(converted_position_2) * cos(converted_position_1 + converted_position_2);
             double torque_numerator = -kd * force - (theta_design_1 * theta_design_2 - theta_design_3 * theta_design_3 * cos(converted_position_2) * cos(converted_position_2)) * (converted_velocity_1 + kp * q_dash);
@@ -194,7 +206,9 @@ private:
             double torque = torque_numerator / torque_denominator;
 
             f = torque;
-            RCLCPP_INFO(this->get_logger(), BLUE_TEXT "F: %.4f", f);
+            f = -1 * f;
+            f = clamp_force_output(f);
+            RCLCPP_INFO(this->get_logger(), BLUE_TEXT "F: %.4f Q: %.4f E_d: %.4f", f, q_dash, E_dash);
         }
         auto message = std_msgs::msg::Float64MultiArray();
         message.data.push_back(f);
@@ -334,6 +348,108 @@ private:
         }
     }
 
+    void get_swinger1_to_top_position(const sensor_msgs::msg::JointState &msg)
+    { // Find the indices of the "slider" and "swinger" joints
+        // auto slider_it = std::find(msg.name.begin(), msg.name.end(), "slider_1");
+        auto swinger1_it = std::find(msg.name.begin(), msg.name.end(), "continuous_revolute_1");
+        auto swinger2_it = std::find(msg.name.begin(), msg.name.end(), "continuous_revolute_2");
+
+        double slider_position;
+        double slider_velocity;
+
+        double swinger1_position;
+        double swinger1_velocity;
+
+        double swinger2_position;
+        double swinger2_velocity;
+
+        double switching_range = lqr_transition_angle_;
+        double f;
+
+        if (swinger1_it != msg.name.end())
+        {
+            auto index = std::distance(msg.name.begin(), swinger1_it);
+            swinger1_position = msg.position[index];
+            if (!rviz_test)
+            {
+                swinger1_velocity = msg.velocity[index];
+            }
+            else
+            {
+                swinger1_velocity = swinger1_position - swinger1_previous_position;
+                swinger1_previous_position = swinger1_position;
+            }
+
+            // RCLCPP_INFO(this->get_logger(), "Swinger -> Position: %.2f, Velocity: %.2f", swinger_position, swinger_velocity);
+        }
+        else
+        {
+            RCLCPP_WARN(this->get_logger(), "Swinger1 joint not found in the message.");
+        }
+
+        if (swinger2_it != msg.name.end())
+        {
+            auto index = std::distance(msg.name.begin(), swinger2_it);
+            swinger2_position = msg.position[index];
+            if (!rviz_test)
+            {
+                swinger2_velocity = msg.velocity[index];
+            }
+            else
+            {
+                swinger2_velocity = swinger2_position - swinger2_previous_position;
+                swinger2_previous_position = swinger2_position;
+            }
+
+            // RCLCPP_INFO(this->get_logger(), "Swinger -> Position: %.2f, Velocity: %.2f", swinger_position, swinger_velocity);
+        }
+        else
+        {
+            RCLCPP_WARN(this->get_logger(), "Swinger2 joint not found in the message.");
+        }
+
+        // GET THE ANGLE POSITION
+        if (swinger1_it != msg.name.end() && swinger2_it != msg.name.end())
+        {
+            double converted_position_1 = solve_for_angle_from_horizontal(swinger1_position);
+            double converted_position_2 = solve_for_theta_2(swinger2_position);
+
+            double converted_velocity_1 = -1 * swinger1_velocity;
+            double converted_velocity_2 = 1 * swinger2_velocity;
+
+            double computed_error = (PI / 2) - converted_position_1;
+            double change_error_rate = computed_error - previous_computed_error;
+            previous_computed_error = computed_error;
+
+            RCLCPP_WARN(this->get_logger(), "Swinger1 -> %.4f, %.4f", convert_to_degrees(converted_position_1), convert_to_degrees(converted_velocity_1));
+            RCLCPP_WARN(this->get_logger(), "Swinger2 -> %.4f, %.4f", convert_to_degrees(converted_position_2), convert_to_degrees(converted_velocity_2));
+
+            f = PID_k_ * computed_error + PID_d_ * change_error_rate;
+            f = -1 * f; // REVERSE THIS SINCE EVERYTHING IS RE ERSED
+            f = clamp_force_output(f);
+            RCLCPP_WARN(this->get_logger(), "force -> %.4f, error -> %.4f", f, computed_error);
+        }
+        auto message = std_msgs::msg::Float64MultiArray();
+        message.data = {f};
+        publisher_->publish(message);
+    }
+
+    double clamp_force_output(double output)
+    {
+        if (output < (negative_clamp_limit_))
+        {
+            return negative_clamp_limit_;
+        }
+        else if (output > (positive_clamp_limit_))
+        {
+            return positive_clamp_limit_;
+        }
+        else
+        {
+            return output;
+        }
+    }
+
     void process_the_input(const sensor_msgs::msg::JointState &msg)
     {
         if (!initialized_)
@@ -378,6 +494,11 @@ private:
     bool rviz_test = true;
     double swinger1_previous_position;
     double swinger2_previous_position;
+    double PID_k_;
+    double PID_d_;
+    double previous_computed_error;
+    double negative_clamp_limit_;
+    double positive_clamp_limit_;
 };
 
 int main(int argc, char *argv[])
