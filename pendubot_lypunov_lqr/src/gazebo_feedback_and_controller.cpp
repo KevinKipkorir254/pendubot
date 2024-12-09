@@ -17,6 +17,26 @@
 #define RED_TEXT "\033[0;31m"
 #define RESET_COLOR "\033[0m"
 
+// Bright colors
+#define BRIGHT_BLACK_TEXT "\033[0;90m"
+#define BRIGHT_RED_TEXT "\033[0;91m"
+#define BRIGHT_GREEN_TEXT "\033[0;92m"
+#define BRIGHT_YELLOW_TEXT "\033[0;93m"
+#define BRIGHT_BLUE_TEXT "\033[0;94m"
+#define BRIGHT_MAGENTA_TEXT "\033[0;95m"
+#define BRIGHT_CYAN_TEXT "\033[0;96m"
+#define BRIGHT_WHITE_TEXT "\033[0;97m"
+
+// Bright background colors
+#define BRIGHT_BLACK_BACKGROUND "\033[100m"
+#define BRIGHT_RED_BACKGROUND "\033[101m"
+#define BRIGHT_GREEN_BACKGROUND "\033[102m"
+#define BRIGHT_YELLOW_BACKGROUND "\033[103m"
+#define BRIGHT_BLUE_BACKGROUND "\033[104m"
+#define BRIGHT_MAGENTA_BACKGROUND "\033[105m"
+#define BRIGHT_CYAN_BACKGROUND "\033[106m"
+#define BRIGHT_WHITE_BACKGROUND "\033[107m"
+
 using std::placeholders::_1;
 using namespace std::chrono_literals;
 
@@ -46,7 +66,7 @@ public:
             kd_ = this->get_parameter("kd").as_double();
             ke_ = this->get_parameter("ke").as_double();
             kp_ = this->get_parameter("kp").as_double();
-            lqr_transition_angle_ = this->get_parameter("lqr_transition_angle").as_double();
+            lqr_transition_angle_ = convert_to_rads(this->get_parameter("lqr_transition_angle").as_double());
             rviz_test = this->get_parameter("rviz_test").as_bool();
             PID_k_ = this->get_parameter("PID_KP").as_double();
             PID_d_ = this->get_parameter("PID_KD").as_double();
@@ -59,7 +79,7 @@ public:
             RCLCPP_WARN(this->get_logger(), "kp: %.4f", kp_);
             RCLCPP_WARN(this->get_logger(), "PID_KP: %.4f", PID_k_);
             RCLCPP_WARN(this->get_logger(), "PID_KD: %.4f", PID_d_);
-            RCLCPP_WARN(this->get_logger(), "lqr_transition_angle_: %.4f", lqr_transition_angle_);
+            RCLCPP_WARN(this->get_logger(), "lqr_transition_angle_: %.4f", convert_to_degrees(lqr_transition_angle_));
             RCLCPP_WARN(this->get_logger(), "lower clamp: %.4f", negative_clamp_limit_);
             RCLCPP_WARN(this->get_logger(), "higher clamp: %.4f", positive_clamp_limit_);
             if (rviz_test)
@@ -144,75 +164,108 @@ private:
         if (swinger1_it != msg.name.end() && swinger2_it != msg.name.end())
         {
 
-            // Control parameters
-            /*--------------------------------------------------------------------------------*/
-            // THIS SHOULD BE ADDED TO A YAML FILE
-            double kd = kd_;
-            double ke = ke_;
-            double kp = kp_;
-            /*-------------------------------------------------------------------------------*/
-
-            double mass_1 = 0.48763073080899393963;
-            double mass_2 = 0.48763073080899393963;
-            double lenght_1 = 0.4;
-            double lenght_2 = 0.4;
-            double lenghtc1 = lenght_1 / 2;
-            double lengthc2 = lenght_2 / 2;
-            double g = 9.81;
-
-            double inertia1 = 0.0025009745471827196997;
-            double inertia2 = 0.0025009745471827196997;
-
             double converted_position_1 = solve_for_angle_from_horizontal(swinger1_position);
             double converted_position_2 = solve_for_theta_2(swinger2_position);
 
             double converted_velocity_1 = -1 * swinger1_velocity;
             double converted_velocity_2 = 1 * swinger2_velocity;
 
-            RCLCPP_WARN(this->get_logger(), "Swinger1 -> %.4f, %.4f", convert_to_degrees(converted_position_1), convert_to_degrees(converted_velocity_1));
-            RCLCPP_WARN(this->get_logger(), "Swinger2 -> %.4f, %.4f", convert_to_degrees(converted_position_2), convert_to_degrees(converted_velocity_2));
+            double obsolute_joint_2_position = get_swinger2_absolute_position(converted_position_1, converted_position_2);
+            double top_position = convert_to_rads(90);
+            double lower_limit = top_position - lqr_transition_angle_;
+            double upper_limit = top_position + lqr_transition_angle_;
+            double normalized_converted_position1 = normalize_to_pi(converted_position_1);
+            double normalized_converted_position2 = normalize_to_pi(converted_position_2);
+            double normalized_converted_absolute_joint = normalize_to_pi(obsolute_joint_2_position);
 
-            double theta_design_1 = mass_1 * lenghtc1 * lenghtc1 + mass_2 * lenght_1 * lenght_1 + inertia1;
-            double theta_design_2 = mass_2 * lengthc2 * lengthc2 + inertia2;
-            double theta_design_3 = mass_2 * lenght_1 * lengthc2;
-            double theta_design_4 = mass_1 * lenghtc1 + mass_2 * lenght_1;
-            double theta_design_5 = mass_2 * lengthc2;
-
-            // E = (1/2) * q^T * D(q)*q_dot + P(q)
-            //  Matrix D(q)
-            Eigen::Matrix2d Dq;
-            Dq << theta_design_1 + theta_design_2 + 2 * theta_design_3 * cos(converted_position_2), theta_design_2 + theta_design_3 * cos(converted_position_2),
-                theta_design_2 + theta_design_3 * cos(converted_position_2), theta_design_2;
-
-            // Gravity vector G(q)
-            Eigen::Vector2d Pq;
-            Pq << converted_velocity_1,
-                converted_velocity_2;
-
-            // Gravity vector G(q) top
-            Eigen::Vector2d Pq_top;
-            Pq_top << 0.0,
-                0.0;
-
-            double E = 0.5 * Pq.transpose() * Dq * Pq + theta_design_4 * g * sin(converted_position_1) + theta_design_5 * g * sin(converted_position_1 + converted_position_2);
-            double E_top = (theta_design_4 + theta_design_5) * g; // TOP POSITION q_1 = PI/2 q_2 = 0.0
-            double E_dash = E - E_top;
-            double q_dash = converted_position_1 - (PI / 2);
-
-            double force = theta_design_2 * theta_design_3 * sin(converted_position_2) * (converted_velocity_1 + converted_velocity_2) * (converted_velocity_1 + converted_velocity_2) + theta_design_3 * theta_design_3 * cos(converted_position_2) * sin(converted_position_2) * (converted_velocity_1 * converted_velocity_1) - theta_design_2 * theta_design_4 * g * cos(converted_position_1) + theta_design_3 * theta_design_5 * g * cos(converted_position_2) * cos(converted_position_1 + converted_position_2);
-            double torque_numerator = -kd * force - (theta_design_1 * theta_design_2 - theta_design_3 * theta_design_3 * cos(converted_position_2) * cos(converted_position_2)) * (converted_velocity_1 + kp * q_dash);
-            double torque_denominator = (theta_design_1 * theta_design_2 - theta_design_3 * theta_design_3 * cos(converted_position_2) * cos(converted_position_2)) * ke * E_dash + kd * theta_design_2;
-
-            double torque = torque_numerator / torque_denominator;
-
-            f = torque;
-            f = -1 * f;
-            f = clamp_force_output(f);
-            RCLCPP_INFO(this->get_logger(), BLUE_TEXT "F: %.4f Q: %.4f E_d: %.4f", f, q_dash, E_dash);
+            if (((normalized_converted_absolute_joint) > (lower_limit)) && ((normalized_converted_absolute_joint) < (upper_limit)))
+            {
+                double error = convert_to_rads(90) - normalized_converted_absolute_joint;
+                f = calculate_the_LQR_output(normalized_converted_position1, normalized_converted_position2, converted_velocity_1, converted_velocity_2, error);
+                RCLCPP_WARN(this->get_logger(), BRIGHT_GREEN_TEXT "LQR Swinger1 -> %.4f Swinger2 -> %.4f swinger2Abs -> %.4f force -> %.4f vel1 -> %.4f vel2 -> %.4f E -> %.4f", convert_to_degrees(normalized_converted_position1), convert_to_degrees(normalized_converted_position2), convert_to_degrees(normalized_converted_absolute_joint), f,  converted_velocity_1, converted_velocity_2, error);
+            }
+            else
+            {
+                f = calculate_the_lypunov_controller_output_force(normalized_converted_position2, normalized_converted_position2, converted_velocity_1, converted_velocity_2);
+                RCLCPP_WARN(this->get_logger(), BRIGHT_YELLOW_TEXT "LYAP Swinger1 -> %.4f Swinger2 -> %.4f swinger2Abs -> %.4f force -> %.4f vel1 -> %.4f vel2 -> %.4f", convert_to_degrees(normalized_converted_position1), convert_to_degrees(normalized_converted_position2), convert_to_degrees(normalized_converted_absolute_joint), f,  converted_velocity_1, converted_velocity_2);
+            }
         }
         auto message = std_msgs::msg::Float64MultiArray();
         message.data.push_back(f);
         publisher_->publish(message);
+    }
+
+    double calculate_the_lypunov_controller_output_force(double converted_position_1, double converted_position_2, double converted_velocity_1, double converted_velocity_2)
+    {
+        double mass_1 = 0.48763073080899393963;
+        double mass_2 = 0.48763073080899393963;
+        double lenght_1 = 0.4;
+        double lenght_2 = 0.4;
+        double lenghtc1 = lenght_1 / 2;
+        double lengthc2 = lenght_2 / 2;
+        double g = 9.81;
+        double inertia1 = 0.0025009745471827196997;
+        double inertia2 = 0.0025009745471827196997;
+
+        // Control parameters
+        /*--------------------------------------------------------------------------------*/
+        // THIS SHOULD BE ADDED TO A YAML FILE
+        double kd = kd_;
+        double ke = ke_;
+        double kp = kp_;
+        /*-------------------------------------------------------------------------------*/
+
+        double theta_design_1 = mass_1 * lenghtc1 * lenghtc1 + mass_2 * lenght_1 * lenght_1 + inertia1;
+        double theta_design_2 = mass_2 * lengthc2 * lengthc2 + inertia2;
+        double theta_design_3 = mass_2 * lenght_1 * lengthc2;
+        double theta_design_4 = mass_1 * lenghtc1 + mass_2 * lenght_1;
+        double theta_design_5 = mass_2 * lengthc2;
+
+        // E = (1/2) * q^T * D(q)*q_dot + P(q)
+        //  Matrix D(q)
+        Eigen::Matrix2d Dq;
+        Dq << theta_design_1 + theta_design_2 + 2 * theta_design_3 * cos(converted_position_2), theta_design_2 + theta_design_3 * cos(converted_position_2),
+            theta_design_2 + theta_design_3 * cos(converted_position_2), theta_design_2;
+
+        // Gravity vector G(q)
+        Eigen::Vector2d Pq;
+        Pq << converted_velocity_1,
+            converted_velocity_2;
+
+        // Gravity vector G(q) top
+        Eigen::Vector2d Pq_top;
+        Pq_top << 0.0,
+            0.0;
+
+        double E = 0.5 * Pq.transpose() * Dq * Pq + theta_design_4 * g * sin(converted_position_1) + theta_design_5 * g * sin(converted_position_1 + converted_position_2);
+        double E_top = (theta_design_4 + theta_design_5) * g; // TOP POSITION q_1 = PI/2 q_2 = 0.0
+        double E_dash = E - E_top;
+        double q_dash = converted_position_1 - (PI / 2);
+
+        double force = theta_design_2 * theta_design_3 * sin(converted_position_2) * (converted_velocity_1 + converted_velocity_2) * (converted_velocity_1 + converted_velocity_2) + theta_design_3 * theta_design_3 * cos(converted_position_2) * sin(converted_position_2) * (converted_velocity_1 * converted_velocity_1) - theta_design_2 * theta_design_4 * g * cos(converted_position_1) + theta_design_3 * theta_design_5 * g * cos(converted_position_2) * cos(converted_position_1 + converted_position_2);
+        double torque_numerator = -kd * force - (theta_design_1 * theta_design_2 - theta_design_3 * theta_design_3 * cos(converted_position_2) * cos(converted_position_2)) * (converted_velocity_1 + kp * q_dash);
+        double torque_denominator = (theta_design_1 * theta_design_2 - theta_design_3 * theta_design_3 * cos(converted_position_2) * cos(converted_position_2)) * ke * E_dash + kd * theta_design_2;
+
+        double torque = torque_numerator / torque_denominator;
+
+        double f = torque;
+        f = -1 * f;
+        return f;
+    }
+
+    double calculate_the_LQR_output(double converted_position_1, double converted_position_2, double converted_velocity_1, double converted_velocity_2, double error)
+    {
+        double gains_[4] = {K_(0), K_(1), K_(2), K_(3)};
+
+        double error_gain = (gains_[2] * error);
+        double other_gains = (gains_[0] *  converted_position_1) + (gains_[1] * converted_velocity_1) + (gains_[3] * converted_velocity_2);
+        if (rviz_test)
+        {
+            RCLCPP_INFO(this->get_logger(), BRIGHT_CYAN_TEXT "F: %.5f, O: %.5f, E: %.5f", error_gain, other_gains, error);
+        }
+
+        double final_gain = (error_gain - other_gains);
+        return final_gain;
     }
 
     void initialization_proccess(const sensor_msgs::msg::JointState &msg)
@@ -348,6 +401,11 @@ private:
         }
     }
 
+    double get_swinger2_absolute_position(double converted_angle1, double converted_angle2)
+    {
+        return (converted_angle1 + converted_angle2);
+    }
+
     void get_swinger1_to_top_position(const sensor_msgs::msg::JointState &msg)
     { // Find the indices of the "slider" and "swinger" joints
         // auto slider_it = std::find(msg.name.begin(), msg.name.end(), "slider_1");
@@ -432,6 +490,20 @@ private:
         auto message = std_msgs::msg::Float64MultiArray();
         message.data = {f};
         publisher_->publish(message);
+    }
+
+    double normalize_to_pi(double angle)
+    {
+        double normalized_position = fmod(angle, 2 * M_PI); // Wrap to [-2π, 2π]
+        if (normalized_position > M_PI)
+        {
+            normalized_position -= 2 * M_PI; // Wrap to [-π, π]
+        }
+        else if (normalized_position < -M_PI)
+        {
+            normalized_position += 2 * M_PI; // Wrap to [-π, π]
+        }
+        return normalized_position;
     }
 
     double clamp_force_output(double output)
