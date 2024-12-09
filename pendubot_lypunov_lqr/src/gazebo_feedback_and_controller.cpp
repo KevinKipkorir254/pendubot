@@ -181,7 +181,8 @@ private:
             if (((normalized_converted_absolute_joint) > (lower_limit)) && ((normalized_converted_absolute_joint) < (upper_limit)))
             {
                 double error = convert_to_rads(90) - normalized_converted_absolute_joint;
-                f = calculate_the_LQR_output(normalized_converted_position1 - convert_to_rads(90), normalized_converted_position2, converted_velocity_1, converted_velocity_2, error);
+                double error_joint1 = normalized_converted_position1 - convert_to_rads(90);
+                f = calculate_the_LQR_output( error_joint1, normalized_converted_position2, converted_velocity_1, converted_velocity_2, error);
                 RCLCPP_WARN(this->get_logger(), BRIGHT_GREEN_TEXT "LQR Swinger1 -> %.4f Swinger2 -> %.4f swinger2Abs -> %.4f force -> %.4f vel1 -> %.4f vel2 -> %.4f E -> %.4f", convert_to_degrees(normalized_converted_position1), convert_to_degrees(normalized_converted_position2), convert_to_degrees(normalized_converted_absolute_joint), f,  converted_velocity_1, converted_velocity_2, error);
             }
             else
