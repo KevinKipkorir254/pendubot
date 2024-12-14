@@ -262,40 +262,94 @@ private:
         double theta_design_4 = mass_1 * lenghtc1 + mass_2 * lenght_1;
         double theta_design_5 = mass_2 * lengthc2;
 
-        // E = (1/2) * q^T * D(q)*q_dot + P(q)
         //  Matrix D(q)
-        Eigen::Matrix2d Dq;
-        Dq << theta_design_1 + theta_design_2 + 2 * theta_design_3 * cos(converted_position_2), theta_design_2 + theta_design_3 * cos(converted_position_2),
-            theta_design_2 + theta_design_3 * cos(converted_position_2), theta_design_2;
+        Eigen::Matrix2d Dq = Dq_matrix(theta_design_1, theta_design_2, theta_design_3, converted_position_2);
 
-        // Gravity vector G(q)
-        Eigen::Vector2d Pq;
-        Pq << converted_velocity_1,
+        // Matrix C( q, q_dot)
+        Eigen::Matrix2d Cq = Cq_matrix(theta_design_3, converted_position_2, converted_velocity_1, converted_velocity_2);
+
+        // Matrix g(q)
+        Eigen::Vector2d qp = qp_matrix(theta_design_4, theta_design_5, g, converted_position_1, converted_position_2);
+
+        // Matrix T(q)
+        double torque = 0.0;
+        Eigen::Vector2d Tq = tq_matrix(torque);
+
+        // potential energy
+        double Pot_energy = potential_energy( converted_position_1, converted_position_2, theta_design_4, theta_design_5, g);
+
+        // Gravity vector P(q)
+        Eigen::Vector2d Pq_dot;
+        Pq_dot << converted_velocity_1,
             converted_velocity_2;
 
-        // Gravity vector G(q) top
-        Eigen::Vector2d Pq_top;
-        Pq_top << 0.0,
+        double E = energy_of_the_system(Pq_dot, Dq, Pot_energy);
+
+        //  Matrix D(q) top
+        Eigen::Matrix2d Dq_top = Dq_matrix(theta_design_1, theta_design_2, theta_design_3, 0.0);
+
+        // Gravity vector P(q) top
+        Eigen::Vector2d Pq_dot_top;
+        Pq_dot_top << 0.0,
             0.0;
 
-        double E = 0.5 * Pq.transpose() * Dq * Pq + theta_design_4 * g * sin(converted_position_1) + theta_design_5 * g * sin(converted_position_1 + converted_position_2);
-        double E_top = (theta_design_4 + theta_design_5) * g; // TOP POSITION q_1 = PI/2 q_2 = 0.0
-        /// double E_top = (-theta_design_4 - theta_design_5) * g;
+        // potential energy
+        double Pot_energy_top =  potential_energy( 0.0, 0.0, theta_design_4, theta_design_5, g);
+        double E_top = energy_of_the_system( Pq_dot_top, Dq_top, Pot_energy_top);
+
         double E_dash = E - E_top;
-        double q_dash = converted_position_1 - (PI / 2);
-        /// double q_dash = converted_position_1 + (PI / 2);
 
-        // RCLCPP_WARN(this->get_logger(), BRIGHT_YELLOW_TEXT "Q-dash -> %.4f" RESET_COLOR, convert_to_degrees(q_dash));
-
-        double force = theta_design_2 * theta_design_3 * sin(converted_position_2) * (converted_velocity_1 + converted_velocity_2) * (converted_velocity_1 + converted_velocity_2) + theta_design_3 * theta_design_3 * cos(converted_position_2) * sin(converted_position_2) * (converted_velocity_1 * converted_velocity_1) - theta_design_2 * theta_design_4 * g * cos(converted_position_1) + theta_design_3 * theta_design_5 * g * cos(converted_position_2) * cos(converted_position_1 + converted_position_2);
-        double torque_numerator = -kd * force - (theta_design_1 * theta_design_2 - theta_design_3 * theta_design_3 * cos(converted_position_2) * cos(converted_position_2)) * (converted_velocity_1 + kp * q_dash);
-        double torque_denominator = (theta_design_1 * theta_design_2 - theta_design_3 * theta_design_3 * cos(converted_position_2) * cos(converted_position_2)) * ke * E_dash + kd * theta_design_2;
-
-        double torque = torque_numerator / torque_denominator;
+        //get the accelleration
+        Eigen::Vector2d Pq_dot_dot = (Tq - Cq * Pq_dot - qp) * (Dq.inverse());
 
         double f = torque;
         f = -1 * f;
         return f;
+    }
+
+    Eigen::Matrix2d Dq_matrix(double theta_design_1, double theta_design_2, double theta_design_3, double converted_position_2)
+    {
+        Eigen::Matrix2d Dq;
+        Dq << theta_design_1 + theta_design_2 + 2 * theta_design_3 * cos(converted_position_2), theta_design_2 + theta_design_3 * cos(converted_position_2),
+            theta_design_2 + theta_design_3 * cos(converted_position_2), theta_design_2;
+
+        return Dq;
+    }
+    Eigen::Matrix2d Cq_matrix(double theta_design_3, double converted_position_2, double converted_velocity_1, double converted_velocity_2)
+    {
+        Eigen::Matrix2d Cq;
+        Cq << -theta_design_3 * sin(converted_position_2) * converted_velocity_2, -theta_design_3 * sin(converted_position_2) * converted_velocity_2 - theta_design_3 * sin(converted_position_2) * converted_velocity_1,
+            theta_design_3 * sin(converted_position_2) * converted_velocity_1, 0;
+
+        return Cq;
+    }
+    Eigen::Vector2d qp_matrix(double theta_design_4, double theta_design_5, double g, double converted_position_1, double converted_position_2)
+    {
+        Eigen::Vector2d qp;
+        qp << theta_design_4 * g * cos(converted_position_1) + theta_design_5 * g * cos(converted_position_1 + converted_position_2),
+            theta_design_5 * g * cos(converted_position_1 + converted_position_2);
+
+        return qp;
+    }
+    Eigen::Vector2d tq_matrix(double torque)
+    {
+        Eigen::Vector2d Tq;
+        Tq << torque,
+            0;
+
+        return Tq;
+    }
+
+    double potential_energy(double converted_position_1, double converted_position_2, double theta_design_4, double theta_design_5, double g)
+    {
+        double p = theta_design_4 * g * sin(converted_position_1) + theta_design_5 * g * sin(converted_position_1 + converted_position_2);
+        return p;
+    }
+
+    double energy_of_the_system(Eigen::Vector2d Pq_dot, Eigen::Matrix2d Dq, double potential_energy)
+    {
+        double energy = 0.5 * Pq_dot.transpose() * Dq * Pq_dot + potential_energy;
+        return energy;
     }
 
     double calculate_the_LQR_output(double converted_position_1, double converted_position_2, double converted_velocity_1, double converted_velocity_2, double error)
