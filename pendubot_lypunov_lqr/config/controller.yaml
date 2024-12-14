@@ -16,6 +16,8 @@
 
     negative_clamp_limit: -100.0
     positive_clamp_limit: 100.0
+
+    debug: false
    
 # K_ = Eigen::Vector4d(this->get_parameter("K").as_double_array().data());
 # ke_ = this->get_parameter("ke").as_double();

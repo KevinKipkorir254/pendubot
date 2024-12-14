@@ -7,6 +7,7 @@
 #include <cmath>
 #include "rclcpp/rclcpp.hpp"
 #include "sensor_msgs/msg/joint_state.hpp"
+#include "std_msgs/msg/float32.hpp"
 #include "std_msgs/msg/float64_multi_array.hpp"
 
 #define PI 3.14159
@@ -47,6 +48,7 @@ public:
         : Node("state_space_subscriber")
     {
         subscription_ = this->create_subscription<sensor_msgs::msg::JointState>("joint_states", 10, std::bind(&JointStateSubscriber::process_the_input, this, _1));
+        subscription_joint1_ = this->create_subscription<std_msgs::msg::Float32>("circle_position", 10, std::bind(&JointStateSubscriber::joint_1_position, this, _1));
         publisher_ = this->create_publisher<std_msgs::msg::Float64MultiArray>("effort_controller/commands", 10);
 
         this->declare_parameter("K", rclcpp::PARAMETER_DOUBLE_ARRAY);
@@ -59,6 +61,7 @@ public:
         this->declare_parameter("PID_KD", rclcpp::PARAMETER_DOUBLE);
         this->declare_parameter("negative_clamp_limit", rclcpp::PARAMETER_DOUBLE);
         this->declare_parameter("positive_clamp_limit", rclcpp::PARAMETER_DOUBLE);
+        this->declare_parameter("debug", rclcpp::PARAMETER_BOOL);
 
         try
         {
@@ -72,6 +75,7 @@ public:
             PID_d_ = this->get_parameter("PID_KD").as_double();
             negative_clamp_limit_ = this->get_parameter("negative_clamp_limit").as_double();
             positive_clamp_limit_ = this->get_parameter("positive_clamp_limit").as_double();
+            debug_ = this->get_parameter("debug").as_bool();
 
             RCLCPP_WARN(this->get_logger(), "K: %.4f, %.4f, %.4f, %.4f", K_(0), K_(1), K_(2), K_(3));
             RCLCPP_WARN(this->get_logger(), "kd: %.4f", kd_);
@@ -84,11 +88,19 @@ public:
             RCLCPP_WARN(this->get_logger(), "higher clamp: %.4f", positive_clamp_limit_);
             if (rviz_test)
             {
-                RCLCPP_WARN(this->get_logger(), "RVIZ_TEST: TRUE");
+                RCLCPP_INFO(this->get_logger(), "RVIZ_TEST: TRUE");
             }
             else
             {
-                RCLCPP_WARN(this->get_logger(), "RVIZ_TEST: FALSE");
+                RCLCPP_INFO(this->get_logger(), "RVIZ_TEST: FALSE");
+            }
+            if (debug_)
+            {
+                RCLCPP_INFO(this->get_logger(), "DEBUG: FALSE");
+            }
+            else
+            {
+                RCLCPP_INFO(this->get_logger(), "DEBUG: FALSE");
             }
         }
         catch (const rclcpp::exceptions::ParameterUninitializedException &e)
@@ -132,7 +144,10 @@ private:
                 swinger1_previous_position = swinger1_position;
             }
 
-            // RCLCPP_INFO(this->get_logger(), "Swinger -> Position: %.2f, Velocity: %.2f", swinger_position, swinger_velocity);
+            if (debug_)
+            {
+                RCLCPP_INFO(this->get_logger(), "Swinger -> Position: %.2f, Velocity: %.2f", swinger1_position, swinger1_velocity);
+            }
         }
         else
         {
@@ -153,7 +168,10 @@ private:
                 swinger2_previous_position = swinger2_position;
             }
 
-            // RCLCPP_INFO(this->get_logger(), "Swinger -> Position: %.2f, Velocity: %.2f", swinger_position, swinger_velocity);
+            if (debug_)
+            {
+                RCLCPP_INFO(this->get_logger(), "Swinger -> Position: %.2f, Velocity: %.2f", swinger2_position, swinger2_velocity);
+            }
         }
         else
         {
@@ -182,18 +200,40 @@ private:
             {
                 double error = convert_to_rads(90) - normalized_converted_absolute_joint;
                 double error_joint1 = normalized_converted_position1 - convert_to_rads(90);
-                f = calculate_the_LQR_output( error_joint1, normalized_converted_position2, converted_velocity_1, converted_velocity_2, error);
-                RCLCPP_WARN(this->get_logger(), BRIGHT_GREEN_TEXT "LQR Swinger1 -> %.4f Swinger2 -> %.4f swinger2Abs -> %.4f force -> %.4f vel1 -> %.4f vel2 -> %.4f E -> %.4f", convert_to_degrees(normalized_converted_position1), convert_to_degrees(normalized_converted_position2), convert_to_degrees(normalized_converted_absolute_joint), f,  converted_velocity_1, converted_velocity_2, error);
+                if (joint_1_control)
+                {
+                    error_joint1 = error_joint1 + joint1_pendubot_angle_;
+                }
+                f = calculate_the_LQR_output(error_joint1, normalized_converted_position2, converted_velocity_1, converted_velocity_2, error);
+
+                if (debug_)
+                {
+                    RCLCPP_WARN(this->get_logger(), BRIGHT_GREEN_TEXT "LQR Q_dash -> %.4f Swinger1 -> %.4f Swinger2 -> %.4f swinger2Abs -> %.4f force -> %.4f vel1 -> %.4f vel2 -> %.4f E -> %.4f" RESET_COLOR, convert_to_degrees(error_joint1), convert_to_degrees(normalized_converted_position2), convert_to_degrees(normalized_converted_absolute_joint), f, converted_velocity_1, converted_velocity_2, error);
+                }
             }
             else
             {
                 f = calculate_the_lypunov_controller_output_force(normalized_converted_position1, normalized_converted_position2, converted_velocity_1, converted_velocity_2);
-                RCLCPP_WARN(this->get_logger(), BRIGHT_YELLOW_TEXT "LYAP Swinger1 -> %.4f Swinger2 -> %.4f swinger2Abs -> %.4f force -> %.4f vel1 -> %.4f vel2 -> %.4f", convert_to_degrees(normalized_converted_position1), convert_to_degrees(normalized_converted_position2), convert_to_degrees(normalized_converted_absolute_joint), f,  converted_velocity_1, converted_velocity_2);
+
+                if (debug_)
+                {
+                    RCLCPP_WARN(this->get_logger(), BRIGHT_YELLOW_TEXT "LYAP Swinger1 -> %.4f Swinger2 -> %.4f swinger2Abs -> %.4f force -> %.4f vel1 -> %.4f vel2 -> %.4f" RESET_COLOR, convert_to_degrees(normalized_converted_position1), convert_to_degrees(normalized_converted_position2), convert_to_degrees(normalized_converted_absolute_joint), f, converted_velocity_1, converted_velocity_2);
+                }
             }
         }
         auto message = std_msgs::msg::Float64MultiArray();
         message.data.push_back(f);
         publisher_->publish(message);
+    }
+
+    void joint_1_position(const std_msgs::msg::Float32 &msg)
+    {
+        if (debug_)
+        {
+            RCLCPP_INFO(this->get_logger(), BRIGHT_CYAN_TEXT "Joint 1 Position: %.4f" RESET_COLOR, msg.data);
+        }
+        joint1_pendubot_angle_ = msg.data;
+        joint_1_control = true;
     }
 
     double calculate_the_lypunov_controller_output_force(double converted_position_1, double converted_position_2, double converted_velocity_1, double converted_velocity_2)
@@ -240,8 +280,12 @@ private:
 
         double E = 0.5 * Pq.transpose() * Dq * Pq + theta_design_4 * g * sin(converted_position_1) + theta_design_5 * g * sin(converted_position_1 + converted_position_2);
         double E_top = (theta_design_4 + theta_design_5) * g; // TOP POSITION q_1 = PI/2 q_2 = 0.0
+        /// double E_top = (-theta_design_4 - theta_design_5) * g;
         double E_dash = E - E_top;
         double q_dash = converted_position_1 - (PI / 2);
+        /// double q_dash = converted_position_1 + (PI / 2);
+
+        // RCLCPP_WARN(this->get_logger(), BRIGHT_YELLOW_TEXT "Q-dash -> %.4f" RESET_COLOR, convert_to_degrees(q_dash));
 
         double force = theta_design_2 * theta_design_3 * sin(converted_position_2) * (converted_velocity_1 + converted_velocity_2) * (converted_velocity_1 + converted_velocity_2) + theta_design_3 * theta_design_3 * cos(converted_position_2) * sin(converted_position_2) * (converted_velocity_1 * converted_velocity_1) - theta_design_2 * theta_design_4 * g * cos(converted_position_1) + theta_design_3 * theta_design_5 * g * cos(converted_position_2) * cos(converted_position_1 + converted_position_2);
         double torque_numerator = -kd * force - (theta_design_1 * theta_design_2 - theta_design_3 * theta_design_3 * cos(converted_position_2) * cos(converted_position_2)) * (converted_velocity_1 + kp * q_dash);
@@ -259,10 +303,10 @@ private:
         double gains_[4] = {K_(0), K_(1), K_(2), K_(3)};
 
         double error_gain = (gains_[2] * error);
-        double other_gains = (gains_[0] *  converted_position_1) + (gains_[1] * converted_velocity_1) + (gains_[3] * converted_velocity_2);
+        double other_gains = (gains_[0] * converted_position_1) + (gains_[1] * converted_velocity_1) + (gains_[3] * converted_velocity_2);
         if (rviz_test)
         {
-            RCLCPP_INFO(this->get_logger(), BRIGHT_CYAN_TEXT "F: %.5f, O: %.5f, E: %.5f", error_gain, other_gains, error);
+            RCLCPP_INFO(this->get_logger(), BRIGHT_CYAN_TEXT "F: %.5f, O: %.5f, E: %.5f" RESET_COLOR, error_gain, other_gains, error);
         }
 
         double final_gain = (error_gain - other_gains);
@@ -557,6 +601,7 @@ private:
     }
 
     rclcpp::Subscription<sensor_msgs::msg::JointState>::SharedPtr subscription_;
+    rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr subscription_joint1_;
     rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr publisher_; // effort controller publisher
     Eigen::Vector4d K_;
     double kd_;
@@ -565,6 +610,8 @@ private:
     double lqr_transition_angle_;
     bool initialized_ = false; // whether
     bool rviz_test = true;
+    bool joint_1_control = false; // Default is we do not publish to the controller topic
+    bool debug_ = false;          // print out stuff
     double swinger1_previous_position;
     double swinger2_previous_position;
     double PID_k_;
@@ -572,6 +619,7 @@ private:
     double previous_computed_error;
     double negative_clamp_limit_;
     double positive_clamp_limit_;
+    double joint1_pendubot_angle_ = 0;
 };
 
 int main(int argc, char *argv[])

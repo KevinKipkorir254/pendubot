@@ -72,15 +72,7 @@ class CircularSlider(QWidget):
 
     def mouseMoveEvent(self, event):
         if self.is_mouse_pressed:
-            # Calculate angle difference based on mouse movement
-            #center = self.rect().center()
-            #delta_x = event.pos().x() - center.x()
-            #delta_y = event.pos().y() - center.y()
-            #new_angle = math.degrees(math.atan2(delta_y, delta_x)) + 90
-            #self.angle = new_angle % 360  # Keep the angle within 0-360°
             self.update_angle(event.pos())
-
-            #self.update()  # Trigger paintEvent to redraw
 
     def mouseReleaseEvent(self, event):
         if event.button() == Qt.LeftButton:
